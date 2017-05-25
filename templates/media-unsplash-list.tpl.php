@@ -26,16 +26,7 @@
       </div>
     </li>
   <?php endforeach; ?>
-
-  <?php if ($content['pages'] > 1): ?>
-  <ul id="pager">
-    <?php for ($x = 1; $x <= $content['pages']; $x++): ?>
-      <li class="pager-item">
-        <a href="#" data-page="<?php print $x; ?>" class="<?php print ($x == $page ? 'active' : 'normal'); ?>"><?php print $x; ?></a>
-      </li>
-    <?php endfor; ?>
-  </ul>
-  <?php endif; ?>
+  <?php print render($pager); ?>
 
 <?php else: ?>
   <?php print $content; ?>

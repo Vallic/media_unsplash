@@ -15,14 +15,18 @@
         $('#media-unsplash-external').submit();
       });
 
-      $('li.pager-item a').once().bind('click', function (e) {
+      // Pager for media browser
+      $('div#unsplash-output ul.pager li a').once().bind('click', function (e) {
         e.preventDefault();
 
         var search_term = Drupal.settings.media_unsplash.term;
-        var unsplash_page = $(this).attr('data-page');
+
+        var page_number = media_unsplash_parse_url('page', $(this).attr('href'));
+
+        var unsplash_page = parseInt(page_number);
 
         $.ajax({
-          url: Drupal.settings.basePath + 'callback/unsplash/' + unsplash_page + '/' + search_term,
+          url: Drupal.settings.basePath + 'callback/unsplash/?page=' + unsplash_page + '&term=' + search_term,
           method: 'GET',
           data: {},
           dataType: 'html',
@@ -31,8 +35,20 @@
           }
         });
 
+        $('html, body').animate({
+          scrollTop: $('#unsplash-output').offset().top
+        }, 0);
+
       });
 
     }
   };
 }(jQuery));
+
+function media_unsplash_parse_url(field, url) {
+  'use strict';
+  var href = url ? url : window.location.href;
+  var reg = new RegExp('[?&]' + field + '=([^&#]*)', 'i');
+  var string = reg.exec(href);
+  return string ? string[1] : null;
+}

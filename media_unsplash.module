@@ -31,11 +31,10 @@ function media_unsplash_menu() {
     'file path' => drupal_get_path('module', 'file_entity'),
   );
 
-  $items['callback/unsplash/%/%'] = array(
+  $items['callback/unsplash'] = array(
     'title' => 'Unsplash',
     'description' => 'Add images from unsplash to your media library.',
     'page callback' => 'media_unsplash_ajax_content',
-    'page arguments' => array(2, 3),
     'access arguments' => array('access media browser'),
     'type' => MENU_CALLBACK,
     'file' => 'media_unsplash.pages.inc',
@@ -52,7 +51,7 @@ function media_unsplash_theme($existing, $type, $theme, $path) {
     'media_unsplash_list' => array(
       'variables' => array(
         'content' => NULL,
-        'page' => NULL,
+        'pager' => NULL,
       ),
       'template' => 'media-unsplash-list',
       'path' => drupal_get_path('module', 'media_unsplash') . '/templates',
@@ -164,7 +163,8 @@ function media_unsplash_form_file_entity_add_upload_alter(&$form, &$form_state, 
     $form['#validators'] = array();
 
     if (!empty($options['types'])) {
-      $form['#validators']['media_file_validate_types'] = array($options['types']);
+      // Add custom validation while files cannot be validated trough default.
+      $form['#validators']['media_unsplash_validate_type'] = array($options['types']);
     }
 
     // Add validation and submission handlers to the form and ensure that they
@@ -172,6 +172,22 @@ function media_unsplash_form_file_entity_add_upload_alter(&$form, &$form_state, 
     array_unshift($form['#validate'], 'media_unsplash_add_validate');
     array_unshift($form['#submit'], 'media_unsplash_add_submit');
   }
+}
+
+/**
+ * Custom validation checking for image type only.
+ *
+ * @see media_file_validate_types()
+ */
+function media_unsplash_validate_type($file, $types) {
+  $errors = array();
+
+  // Check only for image type.
+  if (!in_array('image', $types)) {
+    $errors[] = t('Only the following types of files are allowed to be uploaded: %types-allowed', array('%types-allowed' => implode(', ', $types)));
+  }
+
+  return $errors;
 }
 
 /**
@@ -195,9 +211,17 @@ function media_unsplash_external_ajax_callback($form, $form_state) {
 
     // Receive content.
     $content = media_unsplash_search($search_term, $page);
+
+    $pager = '';
+
+    if (is_array($content)) {
+      $total = intval($content['total']);
+      $pager = media_unsplash_render_pager($total);
+    }
+
     $output = theme('media_unsplash_list', array(
       'content' => $content,
-      'page' => $page,
+      'pager' => $pager,
     ));
   }
 
@@ -226,6 +250,9 @@ function media_unsplash_external_ajax_callback($form, $form_state) {
  */
 function media_unsplash_search($search_term, $page) {
 
+  // Define default items per page.
+  $num_per_page = 30;
+
   // Unsplash Client ID.
   $unsplash_api = variable_get('media_unsplash_api', "");
 
@@ -245,7 +272,7 @@ function media_unsplash_search($search_term, $page) {
     $context = array(
       'client_id' => $unsplash_api,
       'query' => $search_term,
-      'per_page' => 30,
+      'per_page' => $num_per_page,
       'page' => $page,
     );
 
@@ -262,8 +289,8 @@ function media_unsplash_search($search_term, $page) {
       // Get response data.
       $json_response = drupal_json_decode($request->data);
 
-      // Pages.
-      $total_pages = $json_response['total_pages'];
+      // Total result count.
+      $total = $json_response['total'];
 
       // Set default message if no images.
       $content = t('No pictures for current search');
@@ -306,7 +333,7 @@ function media_unsplash_search($search_term, $page) {
 
         $content = array(
           'images' => $images,
-          'pages' => $total_pages,
+          'total' => $total,
         );
 
         // Set cache to three minutes, respect Unsplash api.
@@ -419,4 +446,29 @@ function media_unsplash_add_submit($form, &$form_state) {
       $form_state['storage']['upload'] = $file->fid;
     }
   }
+}
+
+/**
+ * Function to generate pager.
+ *
+ * @param int $total
+ *   Number of total results.
+ *
+ * @return array
+ *   Return pager array.
+ */
+function media_unsplash_render_pager($total) {
+
+  $_GET['q'] = 'callback/unsplash';
+
+  // Initialize pager and gets current page.
+  $current_page = pager_default_initialize($total, 30);
+
+  // Calls Drupal standard pager theme and set 10 page links on pager.
+  $pager = array(
+    '#theme' => 'pager',
+    '#quantity' => 10,
+  );
+
+  return $pager;
 }
