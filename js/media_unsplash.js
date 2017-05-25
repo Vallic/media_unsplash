@@ -14,6 +14,25 @@
         // Autosubmit form.
         $('#media-unsplash-external').submit();
       });
+
+      $('li.pager-item a').once().bind('click', function (e) {
+        e.preventDefault();
+
+        var search_term = Drupal.settings.media_unsplash.term;
+        var unsplash_page = $(this).attr('data-page');
+
+        $.ajax({
+          url: Drupal.settings.basePath + 'callback/unsplash/' + unsplash_page + '/' + search_term,
+          method: 'GET',
+          data: {},
+          dataType: 'html',
+          success: function (data) {
+            $('#unsplash-output').html(data);
+          }
+        });
+
+      });
+
     }
   };
 }(jQuery));

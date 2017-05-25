@@ -31,6 +31,16 @@ function media_unsplash_menu() {
     'file path' => drupal_get_path('module', 'file_entity'),
   );
 
+  $items['callback/unsplash/%/%'] = array(
+    'title' => 'Unsplash',
+    'description' => 'Add images from unsplash to your media library.',
+    'page callback' => 'media_unsplash_ajax_content',
+    'page arguments' => array(2, 3),
+    'access arguments' => array('access media browser'),
+    'type' => MENU_CALLBACK,
+    'file' => 'media_unsplash.pages.inc',
+  );
+
   return $items;
 }
 
@@ -41,7 +51,8 @@ function media_unsplash_theme($existing, $type, $theme, $path) {
   return array(
     'media_unsplash_list' => array(
       'variables' => array(
-        'images' => NULL,
+        'content' => NULL,
+        'page' => NULL,
       ),
       'template' => 'media-unsplash-list',
       'path' => drupal_get_path('module', 'media_unsplash') . '/templates',
@@ -102,6 +113,11 @@ function media_unsplash_form_file_entity_add_upload_alter(&$form, &$form_state, 
       '#attributes' => array('placeholder' => t('Enter search term')),
     );
 
+    $form['unsplash_page'] = array(
+      '#type' => 'hidden',
+      '#value' => isset($form_state['storage']['unsplash_page']) ? $form_state['storage']['unsplash_page'] : 1,
+    );
+
     $form['unsplash_code'] = array(
       '#type' => 'hidden',
       '#title' => t('File URL'),
@@ -124,6 +140,7 @@ function media_unsplash_form_file_entity_add_upload_alter(&$form, &$form_state, 
         'callback' => 'media_unsplash_external_ajax_callback',
         'wrapper' => 'unsplash-output',
         'event' => 'click',
+        'method' => 'replace',
       ),
     );
 
@@ -167,11 +184,20 @@ function media_unsplash_external_ajax_callback($form, $form_state) {
   if (!empty($form_state['values']['unsplash_image'])) {
     // Search input.
     $search_term = check_plain($form_state['values']['unsplash_image']);
+    $page = $form_state['values']['unsplash_page'];
+
+    // Send sanitized search term to JS.
+    drupal_add_js(array(
+      'media_unsplash' => array('term' => $search_term),
+    ),
+      'setting'
+    );
 
     // Receive content.
-    $content = media_unsplash_search($search_term);
+    $content = media_unsplash_search($search_term, $page);
     $output = theme('media_unsplash_list', array(
-      'images' => $content,
+      'content' => $content,
+      'page' => $page,
     ));
   }
 
@@ -192,11 +218,13 @@ function media_unsplash_external_ajax_callback($form, $form_state) {
  *
  * @param string $search_term
  *   String upon which we call unsplash api.
+ * @param int $page
+ *   Request page of results.
  *
  * @return string
  *   Return HTML.
  */
-function media_unsplash_search($search_term) {
+function media_unsplash_search($search_term, $page) {
 
   // Unsplash Client ID.
   $unsplash_api = variable_get('media_unsplash_api', "");
@@ -205,7 +233,7 @@ function media_unsplash_search($search_term) {
     return t('Please insert Client ID key on module settings page');
   }
 
-  $cid = 'media:unsplash:' . $search_term;
+  $cid = 'media:unsplash:' . $search_term . ':' . $page;
 
   // If a cached entry exists, return it.
   if ($cached = cache_get($cid)) {
@@ -217,7 +245,8 @@ function media_unsplash_search($search_term) {
     $context = array(
       'client_id' => $unsplash_api,
       'query' => $search_term,
-      'per_page' => 100,
+      'per_page' => 30,
+      'page' => $page,
     );
 
     $api_url = 'https://api.unsplash.com/search/photos?';
@@ -232,6 +261,9 @@ function media_unsplash_search($search_term) {
 
       // Get response data.
       $json_response = drupal_json_decode($request->data);
+
+      // Pages.
+      $total_pages = $json_response['total_pages'];
 
       // Set default message if no images.
       $content = t('No pictures for current search');
@@ -272,7 +304,10 @@ function media_unsplash_search($search_term) {
           );
         }
 
-        $content = $images;
+        $content = array(
+          'images' => $images,
+          'pages' => $total_pages,
+        );
 
         // Set cache to three minutes, respect Unsplash api.
         cache_set($cid, $content, 'cache', time() + 180);
