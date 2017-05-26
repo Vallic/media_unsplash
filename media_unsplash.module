@@ -31,11 +31,13 @@ function media_unsplash_menu() {
     'file path' => drupal_get_path('module', 'file_entity'),
   );
 
-  $items['callback/unsplash'] = array(
+  $items['unsplash/ajax'] = array(
     'title' => 'Unsplash',
-    'description' => 'Add images from unsplash to your media library.',
-    'page callback' => 'media_unsplash_ajax_content',
-    'access arguments' => array('access media browser'),
+    'page callback' => 'media_unsplash_ajax',
+    'theme callback' => 'ajax_base_page_theme',
+    'delivery callback' => 'ajax_deliver',
+    'access callback' => TRUE,
+    'description' => 'Unsplash callback for images loading.',
     'type' => MENU_CALLBACK,
     'file' => 'media_unsplash.pages.inc',
   );
@@ -52,6 +54,7 @@ function media_unsplash_theme($existing, $type, $theme, $path) {
       'variables' => array(
         'content' => NULL,
         'pager' => NULL,
+        'css' => NULL,
       ),
       'template' => 'media-unsplash-list',
       'path' => drupal_get_path('module', 'media_unsplash') . '/templates',
@@ -90,6 +93,8 @@ function media_unsplash_form_file_entity_add_upload_alter(&$form, &$form_state, 
     // Add JS & CSS.
     drupal_add_js(drupal_get_path('module', 'media_unsplash') . '/js/media_unsplash.js');
     drupal_add_css(drupal_get_path('module', 'media_unsplash') . '/css/media_unsplash.css');
+
+    drupal_add_library('system', 'drupal.ajax');
 
     // Unsplash API require branded UTM links.
     $branding = l(t('Unsplash'), 'https://unsplash.com/',
@@ -171,6 +176,19 @@ function media_unsplash_form_file_entity_add_upload_alter(&$form, &$form_state, 
     // run first.
     array_unshift($form['#validate'], 'media_unsplash_add_validate');
     array_unshift($form['#submit'], 'media_unsplash_add_submit');
+
+    $settings = array(
+      'media_unsplash' => array(
+        'ajaxUnsplash' => array(
+          'data' => array(
+            'view_path' => check_plain($_GET['q']),
+            'view_base_path' => '',
+          ),
+        ),
+      ),
+    );
+
+    drupal_add_js($settings, 'setting');
   }
 }
 
@@ -209,20 +227,10 @@ function media_unsplash_external_ajax_callback($form, $form_state) {
       'setting'
     );
 
-    // Receive content.
+    // Search & render content.
     $content = media_unsplash_search($search_term, $page);
+    $output = media_unsplash_render_content($content);
 
-    $pager = '';
-
-    if (is_array($content)) {
-      $total = intval($content['total']);
-      $pager = media_unsplash_render_pager($total);
-    }
-
-    $output = theme('media_unsplash_list', array(
-      'content' => $content,
-      'pager' => $pager,
-    ));
   }
 
   // Return ajax.
@@ -230,9 +238,6 @@ function media_unsplash_external_ajax_callback($form, $form_state) {
     '#type' => 'ajax',
     '#commands' => array(
       ajax_command_html('#unsplash-output', $output),
-      array(
-        'command' => 'afterAjaxScheduleAdded',
-      ),
     ),
   );
 }
@@ -354,6 +359,42 @@ function media_unsplash_search($search_term, $page) {
 }
 
 /**
+ * Generate content + pager.
+ *
+ * @param mixed $content
+ *   Content array.
+ *
+ * @return string
+ *   Return themed content + pager.
+ */
+function media_unsplash_render_content($content) {
+  $pager = '';
+
+  if (is_array($content)) {
+    $total = intval($content['total']);
+
+    $_GET['q'] = 'unsplash/ajax';
+
+    // Initialize pager and gets current page.
+    $current_page = pager_default_initialize($total, 30);
+
+    // Calls Drupal standard pager theme and set 10 page links on pager.
+    $pager = array(
+      '#theme' => 'pager',
+      '#quantity' => 10,
+    );
+  }
+
+  $output = theme('media_unsplash_list', array(
+    'content' => $content,
+    'pager' => $pager,
+    'css' => 'unsplash-output',
+  ));
+
+  return $output;
+}
+
+/**
  * Allow stream wrappers to have their chance at validation.
  *
  * Any module that implements hook_media_parse will have an
@@ -446,29 +487,4 @@ function media_unsplash_add_submit($form, &$form_state) {
       $form_state['storage']['upload'] = $file->fid;
     }
   }
-}
-
-/**
- * Function to generate pager.
- *
- * @param int $total
- *   Number of total results.
- *
- * @return array
- *   Return pager array.
- */
-function media_unsplash_render_pager($total) {
-
-  $_GET['q'] = 'callback/unsplash';
-
-  // Initialize pager and gets current page.
-  $current_page = pager_default_initialize($total, 30);
-
-  // Calls Drupal standard pager theme and set 10 page links on pager.
-  $pager = array(
-    '#theme' => 'pager',
-    '#quantity' => 10,
-  );
-
-  return $pager;
 }

@@ -9,26 +9,27 @@
  * @see template_process()
  */
 ?>
-
-<div class="media-list-thumbnails">
-<?php if (is_array($content)): ?>
-  <?php foreach ($content['images'] as $key => $img): ?>
-    <li>
-      <div class="media-item">
-        <div class="media-thumbnail">
-          <img class="unsplash"
-               data-image="<?php print $img['download']; ?>"
-               src="<?php print $img['thumb']; ?>"/>
-          <div class="label-wrapper">
-            <?php print $img['link']; ?>
+<div id="<?php print $css; ?>" class="<?php print $css; ?>">
+  <div class="media-list-thumbnails">
+    <?php if (is_array($content)): ?>
+      <?php foreach ($content['images'] as $key => $img): ?>
+        <li>
+          <div class="media-item">
+            <div class="media-thumbnail">
+              <img class="unsplash"
+                   data-image="<?php print $img['download']; ?>"
+                   src="<?php print $img['thumb']; ?>"/>
+              <div class="label-wrapper">
+                <?php print $img['link']; ?>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
-    </li>
-  <?php endforeach; ?>
-  <?php print render($pager); ?>
+        </li>
+      <?php endforeach; ?>
+      <?php print render($pager); ?>
 
-<?php else: ?>
-  <?php print $content; ?>
-<?php endif; ?>
+    <?php else: ?>
+      <?php print $content; ?>
+    <?php endif; ?>
+  </div>
 </div>

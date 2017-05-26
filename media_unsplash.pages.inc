@@ -8,17 +8,18 @@
 /**
  * Return search results as html. Use in ajax fetching.
  */
-function media_unsplash_ajax_content() {
-
+function media_unsplash_ajax() {
   $output = t('Response was not initialized');
 
-  $param = drupal_get_query_parameters();
+  // Check permission.
+  if (user_access('access media browser')) {
+    $param = drupal_get_query_parameters();
 
-  // Let's take a minute to prey.
-  $_GET['q'] = 'callback/unsplash';
+    // Let's take a minute to prey.
+    $_GET['q'] = 'unsplash/ajax';
 
-  if (!empty($param)) {
-    if (isset($param['term'])) {
+    if (!empty($param) && isset($param['term'])) {
+
       $search_term = $param['term'];
 
       $page = 1;
@@ -27,25 +28,19 @@ function media_unsplash_ajax_content() {
         $page = $param['page'] + 1;
       }
 
-      // Receive content.
+      // Search & render content.
       $content = media_unsplash_search($search_term, $page);
+      $output = media_unsplash_render_content($content);
 
-      $pager = '';
-
-      if (is_array($content)) {
-        $total = intval($content['total']);
-        $pager = media_unsplash_render_pager($total);
-      }
-
-      $output = theme('media_unsplash_list', array(
-        'content' => $content,
-        'pager' => $pager,
-      ));
+      // Return ajax.
+      return array(
+        '#type' => 'ajax',
+        '#commands' => array(
+          ajax_command_replace('#unsplash-output', $output . drupal_get_js()),
+        ),
+      );
     }
   }
 
-  // Print content + JS.
-  print drupal_get_js() . $output;
-
-  exit;
+  return drupal_access_denied();
 }
