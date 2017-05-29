@@ -9,9 +9,10 @@
  * @see template_process()
  */
 ?>
-<div id="<?php print $css; ?>" class="<?php print $css; ?>">
+<div id="<?php print $css_wrapper; ?>" class="<?php print $css_wrapper; ?>">
   <div class="media-list-thumbnails">
     <?php if (is_array($content)): ?>
+    <ul id="photos">
       <?php foreach ($content['images'] as $key => $img): ?>
         <li>
           <div class="media-item">
@@ -26,7 +27,10 @@
           </div>
         </li>
       <?php endforeach; ?>
+    </ul>
+    <div id="<?php print $pager_wrapper; ?>">
       <?php print render($pager); ?>
+    </div>
 
     <?php else: ?>
       <?php print $content; ?>

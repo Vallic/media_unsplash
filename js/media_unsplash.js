@@ -17,7 +17,7 @@
       });
 
       // Pager for media browser
-      $('div#unsplash-output ul.pager li a').once().bind('click', function (e) {
+      $('div#unsplash-pager ul li a').once().bind('click', function (e) {
 
         // Get sanitized search term.
         var search_term = Drupal.settings.media_unsplash.term;

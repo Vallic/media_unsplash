@@ -8,6 +8,11 @@ form#media-unsplash-external input#edit-search {
   display: inline-block;
 }
 
+#unsplash-output ul#photos {
+  margin: 0;
+  padding: 0;
+}
+
 #unsplash-output li .label-wrapper {
   display: none;
 }

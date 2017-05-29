@@ -388,7 +388,8 @@ function media_unsplash_render_content($content) {
   $output = theme('media_unsplash_list', array(
     'content' => $content,
     'pager' => $pager,
-    'css' => 'unsplash-output',
+    'pager_wrapper' => 'unsplash-pager',
+    'css_wrapper' => 'unsplash-output',
   ));
 
   return $output;
