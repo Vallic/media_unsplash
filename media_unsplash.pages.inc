@@ -36,7 +36,7 @@ function media_unsplash_ajax() {
       return array(
         '#type' => 'ajax',
         '#commands' => array(
-          ajax_command_replace('#unsplash-output', $output . drupal_get_js()),
+          ajax_command_replace('#unsplash-output', $output),
         ),
       );
     }
