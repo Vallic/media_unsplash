@@ -8,3 +8,5 @@ dependencies[] = media_internet
 
 files[] = includes/MediaUnsplash.inc
 files[] = includes/MediaUnsplashHandler.inc
+
+configure = admin/config/media/unsplash
